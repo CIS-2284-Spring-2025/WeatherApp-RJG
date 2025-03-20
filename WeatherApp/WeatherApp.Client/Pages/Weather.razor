@@ -45,13 +45,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        //var result = _http.GetFromJsonAsync<object>("https://api.weatherapi.com/v1/forecast.json?key=46bacfa5020d4034a71161127251803&q=Albuquerque&days=10&aqi=no&alerts=no");
-        var result = await _http.GetAsync("https://api.weatherapi.com/v1/forecast.json?key=46bacfa5020d4034a71161127251803&q=Albuquerque&days=10&aqi=no&alerts=no");
+        HttpResponseMessage? response = await _http.GetAsync("https://api.weatherapi.com/v1/forecast.json?key=46bacfa5020d4034a71161127251803&q=Albuquerque&days=10&aqi=no&alerts=no");
 
-        string content = await result.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync();
         var weatherJson = JsonDocument.Parse(content);
-        var forecastsJson = weatherJson.RootElement.GetProperty("forecast").GetProperty("forecastday");
-        var elements= forecastsJson.EnumerateArray();
+        JsonElement forecastsJson = weatherJson.RootElement.GetProperty("forecast").GetProperty("forecastday");
+        JsonElement.ArrayEnumerator elements = forecastsJson.EnumerateArray();
 
         forecasts = new List<WeatherForecast>();
         foreach (JsonElement element in elements)
