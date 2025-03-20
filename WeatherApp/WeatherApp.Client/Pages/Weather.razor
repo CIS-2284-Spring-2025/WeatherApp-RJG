@@ -1,5 +1,6 @@
 ﻿@page "/weather"
 @using System.Text.Json.Nodes
+@using System.Text.Json
 @attribute [StreamRendering]
 @inject HttpClient _http
 
@@ -40,7 +41,7 @@ else
 }
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private List<WeatherForecast>? forecasts = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -48,28 +49,27 @@ else
         var result = await _http.GetAsync("https://api.weatherapi.com/v1/forecast.json?key=46bacfa5020d4034a71161127251803&q=Albuquerque&days=10&aqi=no&alerts=no");
 
         string content = await result.Content.ReadAsStringAsync();
-        var jsonObj = JsonNode.Parse(content);
+        var weatherJson = JsonDocument.Parse(content);
+        var forecastsJson = weatherJson.RootElement.GetProperty("forecast").GetProperty("forecastday");
+        var elements= forecastsJson.EnumerateArray();
 
-        // Simulate asynchronous loading to demonstrate streaming rendering
-        await Task.Delay(1500);
-        //TODO: put this into our weather class.
-
-
-        var startDate = DateOnly.FromDateTime(DateTime.Now);
-        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-        forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        forecasts = new List<WeatherForecast>();
+        foreach (JsonElement element in elements)
         {
-            Date = startDate.AddDays(index),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = summaries[Random.Shared.Next(summaries.Length)]
-        }).ToArray();
+            var forecast = new WeatherForecast();
+
+            forecast.Date = DateOnly.FromDateTime(element.GetProperty("date").GetDateTime());
+            forecast.TemperatureC = (float) element.GetProperty("day").GetProperty("avgtemp_c").GetDouble();
+            forecast.Summary = element.GetProperty("day").GetProperty("condition").GetProperty("text").ToString();
+            forecasts.Add(forecast);
+        };
     }
 
     private class WeatherForecast
     {
         public DateOnly Date { get; set; }
-        public int TemperatureC { get; set; }
+        public float TemperatureC { get; set; }
         public string? Summary { get; set; }
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+        public float TemperatureF => 32 + (int)(TemperatureC / 0.5556);
     }
 }
